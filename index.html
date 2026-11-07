@@ -141,6 +141,37 @@
       padding-bottom: 12px;
     }
 
+
+    .drag-handle {
+      color: #94A3B8;
+      font-size: 18px;
+      line-height: 1;
+      padding: 6px 4px 6px 0;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+      color: #2563EB;
+    }
+    .todo-card {
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    }
+    .todo-card.dragging {
+      opacity: 0.88;
+      transform: scale(1.02);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+      border: 1.5px solid #3B82F6;
+      z-index: 20;
+    }
+
     .todo-card {
       background: var(--card-glass);
       border: 1px solid #FFFFFF;
@@ -606,8 +637,12 @@
           ? `<button class="move-btn promote" onclick="moveItem('${item.id}', true)">☀️ 今日へ</button>`
           : '';
 
+        const dragHandle = !isDone
+          ? `<div class="drag-handle" data-drag-handle="1" title="ドラッグして順番入れ替え">≡</div>`
+          : '';
         return `
-          <div class="todo-card ${isDone ? 'done-card' : ''}">
+          <div class="todo-card ${isDone ? 'done-card' : ''}" data-id="${item.id}">
+            ${dragHandle}
             <button class="checkbox-btn ${isDone ? 'checked' : ''}" onclick="${isDone ? `reopenItem('${item.id}')` : `completeItem('${item.id}')`}">${isDone ? '✓' : ''}</button>
             <div class="card-body">
               <div class="card-title">${escapeHtml(item.title)}</div>
@@ -735,9 +770,221 @@
       localStorage.setItem(SB_URL_KEY, document.getElementById('sbUrlInput').value.trim());
       localStorage.setItem(SB_ANON_KEY, document.getElementById('sbKeyInput').value.trim());
       closeSettings();
-      loadItems();
+  
+    let dragState = null;
+
+    function initDragReorder() {
+      const container = document.getElementById("appListContainer");
+      if (!container || container.dataset.dragInit === "1") return;
+      container.dataset.dragInit = "1";
+
+      container.addEventListener("pointerdown", (e) => {
+        const handle = e.target.closest("[data-drag-handle]");
+        if (!handle || currentTab === "done") return;
+        const card = handle.closest(".todo-card");
+        if (!card) return;
+
+        e.preventDefault();
+        card.setPointerCapture(e.pointerId);
+        card.classList.add("dragging");
+
+        dragState = {
+          pointerId: e.pointerId,
+          card,
+          container,
+          changed: false
+        };
+      });
+
+      container.addEventListener("pointermove", (e) => {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        e.preventDefault();
+        const { card } = dragState;
+        const siblings = [...container.querySelectorAll(".todo-card:not(.dragging)")];
+        let nextSibling = null;
+        for (const sib of siblings) {
+          const rect = sib.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          if (e.clientY < midY) {
+            nextSibling = sib;
+            break;
+          }
+        }
+        const currentNext = card.nextElementSibling;
+        if (nextSibling !== currentNext) {
+          container.insertBefore(card, nextSibling);
+          dragState.changed = true;
+        }
+      });
+
+      const finishDrag = async (e) => {
+        if (!dragState || (e && e.pointerId !== dragState.pointerId)) return;
+        const { card, changed } = dragState;
+        card.classList.remove("dragging");
+        dragState = null;
+        if (changed) {
+          await commitDomOrder();
+        }
+      };
+
+      container.addEventListener("pointerup", finishDrag);
+      container.addEventListener("pointercancel", finishDrag);
     }
 
+    async function commitDomOrder() {
+      const container = document.getElementById("appListContainer");
+      const orderedIds = [...container.querySelectorAll(".todo-card")]
+        .map(el => el.getAttribute("data-id"))
+        .filter(Boolean);
+      if (!orderedIds.length) return;
+
+      // Update created_at sequentially so both local and Supabase preserve the exact dragged order
+      const baseTime = new Date("2026-01-01T00:00:00Z").getTime();
+      const idToRank = new Map();
+      orderedIds.forEach((id, idx) => idToRank.set(id, idx));
+
+      const reorderedSubset = [];
+      for (const id of orderedIds) {
+        const found = items.find(t => t.id === id);
+        if (found) {
+          const newCreatedAt = new Date(baseTime + idToRank.get(id) * 1000).toISOString();
+          found.created_at = newCreatedAt;
+          reorderedSubset.push(found);
+        }
+      }
+
+      // Rebuild items array keeping the newly ordered subset in place
+      const subsetSet = new Set(orderedIds);
+      const others = items.filter(t => !subsetSet.has(t.id));
+      items = [...reorderedSubset, ...others];
+      saveItems();
+
+      // Persist new order to Supabase in background
+      const { url, key } = getCreds();
+      if (url && key) {
+        await Promise.all(
+          reorderedSubset.map(item =>
+            fetch(`${url.replace(/\/$/, "")}/rest/v1/todos?id=eq.${encodeURIComponent(item.id)}`, {
+              method: "PATCH",
+              headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ created_at: item.created_at })
+            }).catch(() => {})
+          )
+        );
+        notifyNativeWidget();
+      }
+    }
+
+    initDragReorder();
+    loadItems();
+    }
+
+
+    let dragState = null;
+
+    function initDragReorder() {
+      const container = document.getElementById("appListContainer");
+      if (!container || container.dataset.dragInit === "1") return;
+      container.dataset.dragInit = "1";
+
+      container.addEventListener("pointerdown", (e) => {
+        const handle = e.target.closest("[data-drag-handle]");
+        if (!handle || currentTab === "done") return;
+        const card = handle.closest(".todo-card");
+        if (!card) return;
+
+        e.preventDefault();
+        card.setPointerCapture(e.pointerId);
+        card.classList.add("dragging");
+
+        dragState = {
+          pointerId: e.pointerId,
+          card,
+          container,
+          changed: false
+        };
+      });
+
+      container.addEventListener("pointermove", (e) => {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        e.preventDefault();
+        const { card } = dragState;
+        const siblings = [...container.querySelectorAll(".todo-card:not(.dragging)")];
+        let nextSibling = null;
+        for (const sib of siblings) {
+          const rect = sib.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          if (e.clientY < midY) {
+            nextSibling = sib;
+            break;
+          }
+        }
+        const currentNext = card.nextElementSibling;
+        if (nextSibling !== currentNext) {
+          container.insertBefore(card, nextSibling);
+          dragState.changed = true;
+        }
+      });
+
+      const finishDrag = async (e) => {
+        if (!dragState || (e && e.pointerId !== dragState.pointerId)) return;
+        const { card, changed } = dragState;
+        card.classList.remove("dragging");
+        dragState = null;
+        if (changed) {
+          await commitDomOrder();
+        }
+      };
+
+      container.addEventListener("pointerup", finishDrag);
+      container.addEventListener("pointercancel", finishDrag);
+    }
+
+    async function commitDomOrder() {
+      const container = document.getElementById("appListContainer");
+      const orderedIds = [...container.querySelectorAll(".todo-card")]
+        .map(el => el.getAttribute("data-id"))
+        .filter(Boolean);
+      if (!orderedIds.length) return;
+
+      // Update created_at sequentially so both local and Supabase preserve the exact dragged order
+      const baseTime = new Date("2026-01-01T00:00:00Z").getTime();
+      const idToRank = new Map();
+      orderedIds.forEach((id, idx) => idToRank.set(id, idx));
+
+      const reorderedSubset = [];
+      for (const id of orderedIds) {
+        const found = items.find(t => t.id === id);
+        if (found) {
+          const newCreatedAt = new Date(baseTime + idToRank.get(id) * 1000).toISOString();
+          found.created_at = newCreatedAt;
+          reorderedSubset.push(found);
+        }
+      }
+
+      // Rebuild items array keeping the newly ordered subset in place
+      const subsetSet = new Set(orderedIds);
+      const others = items.filter(t => !subsetSet.has(t.id));
+      items = [...reorderedSubset, ...others];
+      saveItems();
+
+      // Persist new order to Supabase in background
+      const { url, key } = getCreds();
+      if (url && key) {
+        await Promise.all(
+          reorderedSubset.map(item =>
+            fetch(`${url.replace(/\/$/, "")}/rest/v1/todos?id=eq.${encodeURIComponent(item.id)}`, {
+              method: "PATCH",
+              headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ created_at: item.created_at })
+            }).catch(() => {})
+          )
+        );
+        notifyNativeWidget();
+      }
+    }
+
+    initDragReorder();
     loadItems();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});

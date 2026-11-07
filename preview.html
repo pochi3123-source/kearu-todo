@@ -889,12 +889,7 @@
     function selectTodayItems(all) {
       return all
         .filter(t => t.status === 'todo' && (t.is_today || Boolean(t.due_date)))
-        .sort((a, b) => {
-          if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
-          if (a.due_date) return -1;
-          if (b.due_date) return 1;
-          return (a.created_at || '').localeCompare(b.created_at || '');
-        });
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
     }
 
     function escapeHtml(str) {
