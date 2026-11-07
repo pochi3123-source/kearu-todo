@@ -143,10 +143,11 @@
 
 
     .drag-handle {
-      color: #94A3B8;
-      font-size: 18px;
+      color: #64748B;
+      font-size: 19px;
       line-height: 1;
-      padding: 6px 4px 6px 0;
+      padding: 8px 6px 8px 2px;
+      margin: -4px 0 -4px -2px;
       cursor: grab;
       user-select: none;
       -webkit-user-select: none;
@@ -154,22 +155,41 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      border-radius: 8px;
+      transition: color 0.15s ease, background 0.15s ease;
     }
     .drag-handle:active {
       cursor: grabbing;
-      color: #2563EB;
+      color: #1D4ED8;
+      background: rgba(59, 130, 246, 0.12);
     }
     .todo-card {
       user-select: none;
       -webkit-user-select: none;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+      will-change: transform;
     }
-    .todo-card.dragging {
-      opacity: 0.88;
-      transform: scale(1.02);
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
-      border: 1.5px solid #3B82F6;
-      z-index: 20;
+    .todo-card.drag-placeholder {
+      opacity: 0.28;
+      background: rgba(255, 255, 255, 0.45);
+      border: 2px dashed rgba(37, 99, 235, 0.65);
+      box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.08);
+      transform: scale(0.98);
+    }
+    .todo-card.drag-floating {
+      position: fixed;
+      margin: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.98);
+      border: 2px solid #3B82F6;
+      box-shadow:
+        0 20px 38px rgba(15, 23, 42, 0.32),
+        0 6px 14px rgba(37, 99, 235, 0.22);
+      transition: box-shadow 0.15s ease;
+    }
+    .todo-card.drag-floating .drag-handle {
+      color: #2563EB;
+      background: rgba(59, 130, 246, 0.14);
     }
 
     .todo-card {
@@ -497,7 +517,7 @@
     const DEFAULT_ITEMS = [
       {
         id: 'kearu-1',
-        title: '出社時に挨拶＋一言だけ話しかける',
+        title: '出社する同僚へ一言話しかける',
         short_note: '最小: うまく話そうとせず挨拶＋一言だけ',
         requires_submission_check: false,
         is_today: true,
@@ -655,6 +675,14 @@
       }).join('');
     }
 
+    function notifyNativeWidget() {
+      try {
+        if (window.PochiBridge && typeof window.PochiBridge.refreshWidget === 'function') {
+          window.PochiBridge.refreshWidget();
+        }
+      } catch (e) {}
+    }
+
     async function completeItem(id) {
       const nowIso = new Date().toISOString();
       items = items.map(t => t.id === id ? { ...t, status: 'done', completed_at: nowIso } : t);
@@ -666,6 +694,7 @@
           headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'done', completed_at: nowIso })
         });
+        notifyNativeWidget();
       }
     }
 
@@ -679,6 +708,7 @@
           headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'todo', completed_at: null })
         });
+        notifyNativeWidget();
       }
     }
 
@@ -692,6 +722,7 @@
           headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_today: toToday })
         });
+        notifyNativeWidget();
       }
     }
 
@@ -731,6 +762,7 @@
           body: JSON.stringify(payload)
         });
         await loadItems();
+        notifyNativeWidget();
         return;
       }
 
@@ -770,7 +802,9 @@
       localStorage.setItem(SB_URL_KEY, document.getElementById('sbUrlInput').value.trim());
       localStorage.setItem(SB_ANON_KEY, document.getElementById('sbKeyInput').value.trim());
       closeSettings();
-  
+      loadItems();
+    }
+
     let dragState = null;
 
     function initDragReorder() {
@@ -780,48 +814,126 @@
 
       container.addEventListener("pointerdown", (e) => {
         const handle = e.target.closest("[data-drag-handle]");
-        if (!handle || currentTab === "done") return;
+        if (!handle || currentTab === "done" || dragState) return;
         const card = handle.closest(".todo-card");
         if (!card) return;
 
         e.preventDefault();
-        card.setPointerCapture(e.pointerId);
-        card.classList.add("dragging");
+        try {
+          card.setPointerCapture(e.pointerId);
+        } catch (_) {}
+
+        if (navigator.vibrate) {
+          try { navigator.vibrate(12); } catch (_) {}
+        }
+
+        const rect = card.getBoundingClientRect();
+        const floating = card.cloneNode(true);
+        floating.classList.add("drag-floating");
+        floating.style.width = `${rect.width}px`;
+        floating.style.height = `${rect.height}px`;
+        floating.style.left = `${rect.left}px`;
+        floating.style.top = `${rect.top}px`;
+        floating.style.transform = "translate3d(0px, 0px, 0) scale(1) rotate(0deg)";
+        floating.style.transition = "transform 130ms cubic-bezier(0.2, 0.9, 0.3, 1.25), box-shadow 130ms ease";
+        document.body.appendChild(floating);
+
+        requestAnimationFrame(() => {
+          if (floating.parentNode) {
+            floating.style.transform = "translate3d(0px, -3px, 0) scale(1.045) rotate(-1.1deg)";
+          }
+        });
+
+        card.classList.add("drag-placeholder");
 
         dragState = {
           pointerId: e.pointerId,
           card,
+          floating,
           container,
-          changed: false
+          startX: e.clientX,
+          startY: e.clientY,
+          initialRect: rect,
+          changed: false,
+          settling: false
         };
       });
 
       container.addEventListener("pointermove", (e) => {
-        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        if (!dragState || e.pointerId !== dragState.pointerId || dragState.settling) return;
         e.preventDefault();
-        const { card } = dragState;
-        const siblings = [...container.querySelectorAll(".todo-card:not(.dragging)")];
+
+        const { card, floating, initialRect, startX, startY } = dragState;
+        const dx = (e.clientX - startX) * 0.18;
+        const dy = e.clientY - startY;
+
+        floating.style.transition = "box-shadow 130ms ease";
+        floating.style.transform = `translate3d(${dx}px, ${dy}px, 0) scale(1.045) rotate(-1.1deg)`;
+
+        const floatingCenterY = initialRect.top + dy + initialRect.height / 2;
+        const siblings = [...container.querySelectorAll(".todo-card:not(.drag-placeholder)")];
+
         let nextSibling = null;
         for (const sib of siblings) {
           const rect = sib.getBoundingClientRect();
           const midY = rect.top + rect.height / 2;
-          if (e.clientY < midY) {
+          if (floatingCenterY < midY) {
             nextSibling = sib;
             break;
           }
         }
+
         const currentNext = card.nextElementSibling;
         if (nextSibling !== currentNext) {
+          // Record positions before DOM move for smooth FLIP slide animation
+          const prevTops = new Map();
+          siblings.forEach(sib => prevTops.set(sib, sib.getBoundingClientRect().top));
+
           container.insertBefore(card, nextSibling);
           dragState.changed = true;
+
+          if (navigator.vibrate) {
+            try { navigator.vibrate(6); } catch (_) {}
+          }
+
+          siblings.forEach(sib => {
+            const oldTop = prevTops.get(sib);
+            const newTop = sib.getBoundingClientRect().top;
+            const deltaY = oldTop - newTop;
+            if (Math.abs(deltaY) > 1 && sib.animate) {
+              sib.animate(
+                [
+                  { transform: `translateY(${deltaY}px)` },
+                  { transform: "translateY(0px)" }
+                ],
+                { duration: 190, easing: "cubic-bezier(0.2, 0.85, 0.25, 1)" }
+              );
+            }
+          });
         }
       });
 
       const finishDrag = async (e) => {
-        if (!dragState || (e && e.pointerId !== dragState.pointerId)) return;
-        const { card, changed } = dragState;
-        card.classList.remove("dragging");
+        if (!dragState || (e && e.pointerId !== dragState.pointerId) || dragState.settling) return;
+        dragState.settling = true;
+
+        const { card, floating, initialRect, changed } = dragState;
+        const targetRect = card.getBoundingClientRect();
+        const targetDx = targetRect.left - initialRect.left;
+        const targetDy = targetRect.top - initialRect.top;
+
+        floating.style.transition = "transform 165ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 165ms ease";
+        floating.style.transform = `translate3d(${targetDx}px, ${targetDy}px, 0) scale(1) rotate(0deg)`;
+        floating.style.boxShadow = "0 3px 10px rgba(15, 23, 42, 0.08)";
+
+        await new Promise(r => setTimeout(r, 165));
+
+        if (floating.parentNode) {
+          floating.parentNode.removeChild(floating);
+        }
+        card.classList.remove("drag-placeholder");
         dragState = null;
+
         if (changed) {
           await commitDomOrder();
         }
@@ -853,122 +965,11 @@
         }
       }
 
-      // Rebuild items array keeping the newly ordered subset in place
       const subsetSet = new Set(orderedIds);
       const others = items.filter(t => !subsetSet.has(t.id));
       items = [...reorderedSubset, ...others];
       saveItems();
 
-      // Persist new order to Supabase in background
-      const { url, key } = getCreds();
-      if (url && key) {
-        await Promise.all(
-          reorderedSubset.map(item =>
-            fetch(`${url.replace(/\/$/, "")}/rest/v1/todos?id=eq.${encodeURIComponent(item.id)}`, {
-              method: "PATCH",
-              headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ created_at: item.created_at })
-            }).catch(() => {})
-          )
-        );
-        notifyNativeWidget();
-      }
-    }
-
-    initDragReorder();
-    loadItems();
-    }
-
-
-    let dragState = null;
-
-    function initDragReorder() {
-      const container = document.getElementById("appListContainer");
-      if (!container || container.dataset.dragInit === "1") return;
-      container.dataset.dragInit = "1";
-
-      container.addEventListener("pointerdown", (e) => {
-        const handle = e.target.closest("[data-drag-handle]");
-        if (!handle || currentTab === "done") return;
-        const card = handle.closest(".todo-card");
-        if (!card) return;
-
-        e.preventDefault();
-        card.setPointerCapture(e.pointerId);
-        card.classList.add("dragging");
-
-        dragState = {
-          pointerId: e.pointerId,
-          card,
-          container,
-          changed: false
-        };
-      });
-
-      container.addEventListener("pointermove", (e) => {
-        if (!dragState || e.pointerId !== dragState.pointerId) return;
-        e.preventDefault();
-        const { card } = dragState;
-        const siblings = [...container.querySelectorAll(".todo-card:not(.dragging)")];
-        let nextSibling = null;
-        for (const sib of siblings) {
-          const rect = sib.getBoundingClientRect();
-          const midY = rect.top + rect.height / 2;
-          if (e.clientY < midY) {
-            nextSibling = sib;
-            break;
-          }
-        }
-        const currentNext = card.nextElementSibling;
-        if (nextSibling !== currentNext) {
-          container.insertBefore(card, nextSibling);
-          dragState.changed = true;
-        }
-      });
-
-      const finishDrag = async (e) => {
-        if (!dragState || (e && e.pointerId !== dragState.pointerId)) return;
-        const { card, changed } = dragState;
-        card.classList.remove("dragging");
-        dragState = null;
-        if (changed) {
-          await commitDomOrder();
-        }
-      };
-
-      container.addEventListener("pointerup", finishDrag);
-      container.addEventListener("pointercancel", finishDrag);
-    }
-
-    async function commitDomOrder() {
-      const container = document.getElementById("appListContainer");
-      const orderedIds = [...container.querySelectorAll(".todo-card")]
-        .map(el => el.getAttribute("data-id"))
-        .filter(Boolean);
-      if (!orderedIds.length) return;
-
-      // Update created_at sequentially so both local and Supabase preserve the exact dragged order
-      const baseTime = new Date("2026-01-01T00:00:00Z").getTime();
-      const idToRank = new Map();
-      orderedIds.forEach((id, idx) => idToRank.set(id, idx));
-
-      const reorderedSubset = [];
-      for (const id of orderedIds) {
-        const found = items.find(t => t.id === id);
-        if (found) {
-          const newCreatedAt = new Date(baseTime + idToRank.get(id) * 1000).toISOString();
-          found.created_at = newCreatedAt;
-          reorderedSubset.push(found);
-        }
-      }
-
-      // Rebuild items array keeping the newly ordered subset in place
-      const subsetSet = new Set(orderedIds);
-      const others = items.filter(t => !subsetSet.has(t.id));
-      items = [...reorderedSubset, ...others];
-      saveItems();
-
-      // Persist new order to Supabase in background
       const { url, key } = getCreds();
       if (url && key) {
         await Promise.all(
