@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "pochi",
+    "slug": "kearu-todo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.hisahisa.kearutodo",
+      "adaptiveIcon": {
+        "backgroundColor": "#245EDC"
+      }
+    },
+    "plugins": [
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "KearuTodoWidget",
+              "label": "pochi（今日の最小接触）",
+              "description": "今日触れる1〜3個と直近の絶対期限タスクだけを青空と草原の上に表示します",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
+    ]
+  }
+}

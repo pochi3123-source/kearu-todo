@@ -1,0 +1,26 @@
+{
+  "id": "/kearu-todo/",
+  "name": "pochi",
+  "short_name": "pochi",
+  "description": "今日触れる1〜3個（最小接触）と直近の絶対期限タスクだけをWindows XP風の青空と草原に表示するTODOアプリ",
+  "start_url": "/kearu-todo/index.html",
+  "scope": "/kearu-todo/",
+  "display": "standalone",
+  "background_color": "#1E57C8",
+  "theme_color": "#1E57C8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/kearu-todo/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/kearu-todo/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

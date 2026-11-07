@@ -1,0 +1,62 @@
+[
+  {
+    "id": "99077265-a0c5-4622-8c2f-82d44d64063b",
+    "title": "出社時に挨拶＋一言だけ話しかける",
+    "short_note": "最小: うまく話そうとせず挨拶＋一言だけ",
+    "requires_submission_check": false,
+    "is_today": true,
+    "due_date": "2026-11-05",
+    "status": "todo",
+    "source": "kearu",
+    "completed_at": null,
+    "created_at": "2026-11-07T03:38:52.603091+00:00"
+  },
+  {
+    "id": "c322464e-5e03-4a02-b3ad-a07eb5d55348",
+    "title": "紙ノートを開いて1行だけ字を書く",
+    "short_note": "最小: 風呂上がりにペンを持つだけ",
+    "requires_submission_check": false,
+    "is_today": true,
+    "due_date": null,
+    "status": "todo",
+    "source": "kearu",
+    "completed_at": null,
+    "created_at": "2026-11-07T03:38:52.603091+00:00"
+  },
+  {
+    "id": "ec58a67a-8ee9-4a8e-9da3-8217a53baf77",
+    "title": "Logicを開いてボーカルC案を10秒聴く",
+    "short_note": "最小: プロジェクトを開くだけでクリア",
+    "requires_submission_check": false,
+    "is_today": true,
+    "due_date": null,
+    "status": "todo",
+    "source": "kearu",
+    "completed_at": null,
+    "created_at": "2026-11-07T03:38:52.603091+00:00"
+  },
+  {
+    "id": "c9074586-b94e-450f-b071-18e232236377",
+    "title": "Windows PCの定期通知タスクを停止する",
+    "short_note": "設定画面で無効化・反映確認まで",
+    "requires_submission_check": true,
+    "is_today": false,
+    "due_date": null,
+    "status": "todo",
+    "source": "kearu",
+    "completed_at": null,
+    "created_at": "2026-11-07T03:38:52.603091+00:00"
+  },
+  {
+    "id": "489bc7a1-ea42-4254-a18a-e672eb4c2aa5",
+    "title": "応用情報・DFSの図解ページを1つ眺める",
+    "short_note": "最小: Wikiの図を1個見るだけ",
+    "requires_submission_check": false,
+    "is_today": false,
+    "due_date": null,
+    "status": "todo",
+    "source": "kearu",
+    "completed_at": null,
+    "created_at": "2026-11-07T03:38:52.603091+00:00"
+  }
+]

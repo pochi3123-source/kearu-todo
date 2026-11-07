@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>pochi — Androidウィジェット＆アプリ ライブプレビュー</title>
+  <style>
+    :root {
+      --xp-sky-top: #1E57C8;
+      --xp-sky-mid: #3B82F6;
+      --xp-sky-low: #84CAFF;
+      --xp-sky-horizon: #CAE8FF;
+      --xp-hill-light: #7CC623;
+      --xp-hill-mid: #56A818;
+      --xp-hill-deep: #3B8712;
+      --card-glass: rgba(255, 255, 255, 0.92);
+      --card-glass-done: rgba(255, 255, 255, 0.76);
+      --text-main: #0F172A;
+      --text-sub: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(180deg, #0F265C 0%, #1B3B82 100%);
+      color: var(--text-main);
+      padding: 24px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .studio-header {
+      max-width: 980px;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      color: #FFFFFF;
+    }
+
+    .studio-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .studio-header p {
+      font-size: 13px;
+      color: #DBEAFE;
+      margin-top: 3px;
+    }
+
+    .supabase-bar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .supabase-btn {
+      background: rgba(255, 255, 255, 0.16);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .supabase-btn:hover {
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .config-modal {
+      max-width: 980px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 18px;
+      display: none;
+      gap: 10px;
+      flex-direction: column;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .config-modal.open {
+      display: flex;
+    }
+
+    .config-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .config-row input {
+      flex: 1;
+      min-width: 240px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid #CBD5E1;
+      font-size: 13px;
+    }
+
+    .save-config-btn {
+      background: #2563EB;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .showcase-grid {
+      max-width: 980px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 28px;
+      align-items: start;
+    }
+
+    .device-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .device-label {
+      color: #E0F2FE;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Windows XP Bliss 背景を持つスマートフォン枠 */
+    .phone-frame {
+      width: 380px;
+      max-width: 100%;
+      border-radius: 36px;
+      padding: 14px;
+      background: #0F172A;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 0 0 2px #334155;
+    }
+
+    .bliss-screen {
+      position: relative;
+      width: 100%;
+      height: 690px;
+      border-radius: 26px;
+      overflow: hidden;
+      background: linear-gradient(
+        180deg,
+        var(--xp-sky-top) 0%,
+        var(--xp-sky-mid) 38%,
+        var(--xp-sky-low) 67%,
+        var(--xp-sky-horizon) 82%
+      );
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bliss-svg-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .screen-foreground {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 14px 14px;
+      overflow: hidden;
+    }
+
+    /* Android ホーム画面ステータスバー＆時計 */
+    .android-status {
+      display: flex;
+      justify-content: space-between;
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 0 6px 10px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    .home-clock {
+      text-align: center;
+      color: #FFFFFF;
+      margin: 8px 0 16px;
+      text-shadow: 0 2px 8px rgba(15, 35, 80, 0.4);
+    }
+
+    .home-clock .time {
+      font-size: 44px;
+      font-weight: 300;
+      letter-spacing: -1px;
+    }
+
+    .home-clock .date {
+      font-size: 13px;
+      opacity: 0.95;
+    }
+
+    /* Androidホーム画面ウィジェット本体 */
+    .android-widget {
+      background: linear-gradient(165deg, rgba(37, 99, 235, 0.78) 0%, rgba(59, 135, 18, 0.78) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1.5px solid rgba(255, 255, 255, 0.65);
+      border-radius: 24px;
+      padding: 14px;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.26);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .widget-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 2px 4px;
+    }
+
+    .widget-title {
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+    }
+
+    .widget-title span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #E0F2FE;
+    }
+
+    .widget-count-pill {
+      background: #4D9E14;
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .widget-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 290px;
+      overflow-y: auto;
+    }
+
+    /* 白く透ける清潔なTODOカード */
+    .todo-card {
+      background: var(--card-glass);
+      border: 1px solid #FFFFFF;
+      border-radius: 15px;
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+      transition: transform 0.14s ease, opacity 0.14s ease;
+    }
+
+    .todo-card:hover {
+      transform: translateY(-1px);
+    }
+
+    .todo-card.done-card {
+      background: var(--card-glass-done);
+    }
+
+    .checkbox-btn {
+      width: 25px;
+      height: 25px;
+      min-width: 25px;
+      border-radius: 8px;
+      border: 2.2px solid #2563EB;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: #FFFFFF;
+      transition: all 0.15s ease;
+    }
+
+    .checkbox-btn:hover {
+      background: #DBEAFE;
+    }
+
+    .checkbox-btn.checked {
+      background: #4D9E14;
+      border-color: #4D9E14;
+    }
+
+    .card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .done-card .card-title {
+      text-decoration: line-through;
+      color: #475569;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .badge-submit {
+      background: #FEE2E2;
+      color: #B91C1C;
+    }
+
+    .badge-due {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .badge-kearu {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+
+    .card-note {
+      font-size: 11.5px;
+      color: var(--text-sub);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .move-btn {
+      background: #F1F5F9;
+      border: none;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 9px;
+      border-radius: 9px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .move-btn.promote {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .empty-box {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      padding: 20px 14px;
+      text-align: center;
+    }
+
+    .empty-box h4 {
+      font-size: 14px;
+      color: #1E3A8A;
+      margin-bottom: 5px;
+    }
+
+    .empty-box p {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    /* アプリ本体ヘッダー＆3タブ */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+
+    .app-header h2 {
+      color: #FFFFFF;
+      font-size: 20px;
+      font-weight: 800;
+      text-shadow: 0 1px 4px rgba(15, 35, 80, 0.35);
+    }
+
+    .app-header p {
+      color: #EFF6FF;
+      font-size: 11px;
+      margin-top: 2px;
+    }
+
+    .tabs-bar {
+      display: flex;
+      background: rgba(255, 255, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 10px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: #FFFFFF;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 8px 4px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.95);
+      color: #1E40AF;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+    }
+
+    .section-hint {
+      background: rgba(255, 255, 255, 0.76);
+      color: #1E3A8A;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 7px 11px;
+      border-radius: 11px;
+      margin-bottom: 9px;
+    }
+
+    .app-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 12px;
+    }
+
+    /* 下部 1秒追加バー */
+    .quick-add-box {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #FFFFFF;
+      border-radius: 18px;
+      padding: 9px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+      margin-top: 6px;
+    }
+
+    .quick-options {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .quick-options.open {
+      display: flex;
+    }
+
+    .quick-options input {
+      width: 100%;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      border-radius: 9px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .quick-options-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .submit-toggle-btn {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      color: #475569;
+      border-radius: 9px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .submit-toggle-btn.active {
+      background: #FEE2E2;
+      border-color: #FCA5A5;
+      color: #B91C1C;
+    }
+
+    .quick-main-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .opt-toggle-btn {
+      background: #E0F2FE;
+      color: #0369A1;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 9px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .quick-input {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .quick-submit-btn {
+      background: #4D9E14;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .home-shortcut-hint {
+      margin-top: auto;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 11.5px;
+      background: rgba(15, 23, 42, 0.28);
+      padding: 8px 12px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="studio-header">
+    <div>
+      <h1>☁️ pochi — Androidウィジェット ＆ 3タブアプリ 実機シミュレーター</h1>
+      <p>Windows XP (Bliss) の青空と草原 × 白く透けるカード。左のウィジェットでチェックすると右の「軌跡」へリアルタイム移動します。</p>
+    </div>
+    <div class="supabase-bar">
+      <button class="supabase-btn" id="syncStatusBtn" onclick="toggleConfigModal()">
+        🌿 ローカル動作中（クリックでSupabase接続設定）
+      </button>
+      <button class="supabase-btn" onclick="resetSampleData()">
+        🔄 初期サンプルに戻す
+      </button>
+    </div>
+  </div>
+
+  <!-- Supabase 接続設定パネル -->
+  <div class="config-modal" id="configModal">
+    <div style="font-size: 13px; font-weight: 700; color: #1E3A8A;">
+      🔗 Supabase リアルタイム接続設定（空欄のままでもブラウザ内で完全に動作します）
+    </div>
+    <div class="config-row">
+      <input type="text" id="sbUrlInput" placeholder="Supabase Project URL (例: https://xxxx.supabase.co)" />
+      <input type="password" id="sbKeyInput" placeholder="Supabase anon public key" />
+      <button class="save-config-btn" onclick="saveSupabaseConfig()">保存して同期</button>
+    </div>
+  </div>
+
+  <!-- Android 実機インストール用 QRコード＆URLバナー -->
+  <div style="max-width: 980px; width: 100%; background: rgba(255,255,255,0.95); border-radius: 18px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 10px 28px rgba(0,0,0,0.22);">
+    <div style="flex: 1; min-width: 260px;">
+      <div style="font-size: 15px; font-weight: 800; color: #1E3A8A; margin-bottom: 4px;">
+        📲 Androidケータイで今すぐ使う（デプロイ完了！）
+      </div>
+      <div style="font-size: 12.5px; color: #334155; line-height: 1.55;">
+        ① 右のQRコードをAndroidのカメラで読み取るか、<a href="https://pochi3123-source.github.io/kearu-todo/" target="_blank" style="color: #2563EB; font-weight: 700;">https://pochi3123-source.github.io/kearu-todo/</a> を開きます。<br/>
+        ② AndroidのChrome右上メニュー（⋮）➔ <b>「ホーム画面に追加（アプリをインストール）」</b> を押すと、専用アプリとしてホーム画面に入ります！
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; background: #F8FAFC; padding: 8px 12px; border-radius: 12px; border: 1px solid #E2E8F0;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=https%3A%2F%2Fpochi3123-source.github.io%2Fkearu-todo%2F" alt="Android Install QR" width="88" height="88" style="border-radius: 6px;" />
+      <div style="font-size: 11px; color: #475569; font-weight: 700; line-height: 1.4;">
+        Androidカメラで<br/>スキャンして起動
+      </div>
+    </div>
+  </div>
+
+  <div class="showcase-grid">
+    <!-- 左カラム：Android ホーム画面ウィジェット -->
+    <div class="device-col">
+      <div class="device-label">📱 ① Androidホーム画面（ウィジェット表示）</div>
+      <div class="phone-frame">
+        <div class="bliss-screen">
+          <!-- Windows XP Bliss 風 SVG風景 -->
+          <svg class="bliss-svg-bg" viewBox="0 0 400 800" preserveAspectRatio="none">
+            <ellipse cx="90" cy="150" rx="75" ry="22" fill="rgba(255,255,255,0.42)" />
+            <ellipse cx="130" cy="142" rx="55" ry="26" fill="rgba(255,255,255,0.52)" />
+            <ellipse cx="310" cy="210" rx="85" ry="24" fill="rgba(255,255,255,0.38)" />
+            <ellipse cx="200" cy="430" rx="130" ry="28" fill="rgba(255,255,255,0.55)" />
+            <path d="M0,535 C120,480 260,510 400,550 L400,800 L0,800 Z" fill="#7CC623" />
+            <path d="M0,585 C150,550 280,530 400,575 L400,800 L0,800 Z" fill="#56A818" />
+            <path d="M0,645 C140,615 290,635 400,615 L400,800 L0,800 Z" fill="#3B8712" />
+          </svg>
+
+          <div class="screen-foreground">
+            <div class="android-status">
+              <span>5G  100%</span>
+              <span>ケアル Android</span>
+            </div>
+
+            <div class="home-clock">
+              <div class="time">08:45</div>
+              <div class="date">11月5日（木）</div>
+            </div>
+
+            <!-- ホーム画面ウィジェット -->
+            <div class="android-widget">
+              <div class="widget-header">
+                <div class="widget-title">
+                  ☁️ pochi <span>今日の最小接触</span>
+                </div>
+                <div class="widget-count-pill" id="widgetDoneCount">今日触れた: 0</div>
+              </div>
+
+              <div class="widget-list" id="widgetListContainer"></div>
+            </div>
+
+            <div class="home-shortcut-hint">
+              💡 ウィジェットの四角いチェックボックスを押すと、1秒で完了して「軌跡」へ入ります
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右カラム：pochi アプリ本体（3タブ＋1秒追加バー） -->
+    <div class="device-col">
+      <div class="device-label">🌿 ② アプリを開いた画面（3タブ＋下部1秒追加バー）</div>
+      <div class="phone-frame">
+        <div class="bliss-screen">
+          <svg class="bliss-svg-bg" viewBox="0 0 400 800" preserveAspectRatio="none">
+            <ellipse cx="90" cy="150" rx="75" ry="22" fill="rgba(255,255,255,0.42)" />
+            <ellipse cx="130" cy="142" rx="55" ry="26" fill="rgba(255,255,255,0.52)" />
+            <ellipse cx="310" cy="210" rx="85" ry="24" fill="rgba(255,255,255,0.38)" />
+            <ellipse cx="200" cy="430" rx="130" ry="28" fill="rgba(255,255,255,0.55)" />
+            <path d="M0,535 C120,480 260,510 400,550 L400,800 L0,800 Z" fill="#7CC623" />
+            <path d="M0,585 C150,550 280,530 400,575 L400,800 L0,800 Z" fill="#56A818" />
+            <path d="M0,645 C140,615 290,635 400,615 L400,800 L0,800 Z" fill="#3B8712" />
+          </svg>
+
+          <div class="screen-foreground">
+            <div class="android-status">
+              <span>5G  100%</span>
+              <span>pochi</span>
+            </div>
+
+            <div class="app-header">
+              <div>
+                <h2>☁️ pochi</h2>
+                <p>スピードではなくベクトル。今日触れる1〜3個だけ</p>
+              </div>
+            </div>
+
+            <div class="tabs-bar">
+              <button class="tab-btn active" id="tabBtn-today" onclick="switchTab('today')">☀️ 今日</button>
+              <button class="tab-btn" id="tabBtn-backlog" onclick="switchTab('backlog')">🌱 控え</button>
+              <button class="tab-btn" id="tabBtn-done" onclick="switchTab('done')">✨ 軌跡</button>
+            </div>
+
+            <div class="section-hint" id="sectionHintText"></div>
+
+            <div class="app-list" id="appListContainer"></div>
+
+            <!-- 画面下部：1秒追加バー -->
+            <div class="quick-add-box">
+              <div class="quick-options" id="quickOptionsPanel">
+                <input type="text" id="noteInput" placeholder="1行補足（例: 最小: 1問だけ見る）" />
+                <div class="quick-options-row">
+                  <input type="date" id="dueInput" />
+                  <button type="button" class="submit-toggle-btn" id="submitToggleBtn" onclick="toggleSubmitFlag()">
+                    ＋提出確認まで
+                  </button>
+                </div>
+              </div>
+              <div class="quick-main-row">
+                <button type="button" class="opt-toggle-btn" id="optExpandBtn" onclick="toggleQuickOptions()">
+                  1行補足
+                </button>
+                <input
+                  type="text"
+                  class="quick-input"
+                  id="titleInput"
+                  placeholder="今日触れることに1秒で追加..."
+                  onkeydown="if(event.key==='Enter') handleAddTodo()"
+                />
+                <button type="button" class="quick-submit-btn" onclick="handleAddTodo()">追加</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'kearu_todo_preview_items_v1';
+    const SB_URL_KEY = 'kearu_todo_sb_url';
+    const SB_ANON_KEY = 'kearu_todo_sb_anon_key';
+
+    const DEFAULT_ITEMS = [
+      {
+        id: 'kearu-1',
+        title: '出社時に挨拶＋一言だけ話しかける',
+        short_note: '最小: うまく話そうとせず挨拶＋一言だけ',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: '2026-11-05',
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:00:00+09:00'
+      },
+      {
+        id: 'kearu-2',
+        title: '紙ノートを開いて1行だけ字を書く',
+        short_note: '最小: 風呂上がりにペンを持つだけ',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:05:00+09:00'
+      },
+      {
+        id: 'kearu-3',
+        title: 'Logicを開いてボーカルC案を10秒聴く',
+        short_note: '最小: プロジェクトを開くだけでクリア',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:10:00+09:00'
+      },
+      {
+        id: 'kearu-4',
+        title: 'Windows PCの定期通知タスクを停止する',
+        short_note: '設定画面で無効化・停止反映の確認まで',
+        requires_submission_check: true,
+        is_today: false,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:15:00+09:00'
+      },
+      {
+        id: 'kearu-5',
+        title: '応用情報・DFSの図解ページを1つ眺める',
+        short_note: '最小: Wikiの図を1個見るだけ',
+        requires_submission_check: false,
+        is_today: false,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:20:00+09:00'
+      },
+      {
+        id: 'kearu-done-1',
+        title: 'ケアルのシンプル運用（通知ゼロ・夜1回対話）を決める',
+        short_note: '最小: 残す機能3つを整理する',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: null,
+        status: 'done',
+        source: 'kearu',
+        completed_at: '2026-11-04T22:50:00+09:00',
+        created_at: '2026-11-04T22:00:00+09:00'
+      }
+    ];
+
+    let currentTab = 'today';
+    let quickSubmitFlag = false;
+    let items = [];
+
+    function getSupabaseCreds() {
+      return {
+        url: localStorage.getItem(SB_URL_KEY) || 'https://qwvcxsifvqvoexqswdno.supabase.co',
+        key: localStorage.getItem(SB_ANON_KEY) || 'sb_publishable_B5dePwA6PSq53X1tFhMS5w_CQAC0Kh8'
+      };
+    }
+
+    async function loadItems() {
+      const { url, key } = getSupabaseCreds();
+      const statusBtn = document.getElementById('syncStatusBtn');
+      if (url && key) {
+        statusBtn.textContent = '🟢 Supabase リアルタイム接続中';
+        try {
+          const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?select=*&order=created_at.asc`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` }
+          });
+          if (res.ok) {
+            items = await res.json();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            renderAll();
+            return;
+          }
+        } catch (e) {
+          console.warn('Supabase fetch fallback to local:', e);
+        }
+      } else {
+        statusBtn.textContent = '🌿 ローカル動作中（クリックでSupabase接続設定）';
+      }
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } else {
+        items = JSON.parse(raw);
+      }
+      renderAll();
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      renderAll();
+    }
+
+    function selectTodayItems(all) {
+      return all
+        .filter(t => t.status === 'todo' && (t.is_today || Boolean(t.due_date)))
+        .sort((a, b) => {
+          if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+          if (a.due_date) return -1;
+          if (b.due_date) return 1;
+          return (a.created_at || '').localeCompare(b.created_at || '');
+        });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderCardHtml(item, mode) {
+      const isDone = item.status === 'done';
+      const badges = [];
+      if (item.requires_submission_check) {
+        badges.push(`<span class="badge badge-submit">提出・反映確認まで</span>`);
+      }
+      if (item.due_date) {
+        badges.push(`<span class="badge badge-due">📅 期限 ${escapeHtml(item.due_date)}</span>`);
+      }
+      if (item.source === 'kearu') {
+        badges.push(`<span class="badge badge-kearu">ケアル対話</span>`);
+      }
+
+      let rightAction = '';
+      if (mode === 'app-today') {
+        rightAction = `<button class="move-btn" onclick="moveItem('${item.id}', false)">控えへ</button>`;
+      } else if (mode === 'app-backlog') {
+        rightAction = `<button class="move-btn promote" onclick="moveItem('${item.id}', true)">☀️ 今日へ</button>`;
+      }
+
+      return `
+        <div class="todo-card ${isDone ? 'done-card' : ''}">
+          <button
+            class="checkbox-btn ${isDone ? 'checked' : ''}"
+            onclick="${isDone ? `reopenItem('${item.id}')` : `completeItem('${item.id}')`}"
+            title="${isDone ? '未完了に戻す' : '触れた！（完了）'}"
+          >${isDone ? '✓' : ''}</button>
+          <div class="card-body">
+            <div class="card-title">${escapeHtml(item.title)}</div>
+            ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
+            ${item.short_note ? `<div class="card-note">${escapeHtml(item.short_note)}</div>` : ''}
+          </div>
+          ${rightAction}
+        </div>
+      `;
+    }
+
+    function renderAll() {
+      const todayList = selectTodayItems(items);
+      const todayIds = new Set(todayList.map(t => t.id));
+      const backlogList = items.filter(t => t.status === 'todo' && !todayIds.has(t.id));
+      const doneList = items
+        .filter(t => t.status === 'done')
+        .sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+
+      // 1. 左側：Androidウィジェット描画
+      document.getElementById('widgetDoneCount').textContent = `今日触れた: ${doneList.length}`;
+      const widgetEl = document.getElementById('widgetListContainer');
+      if (todayList.length === 0) {
+        widgetEl.innerHTML = `
+          <div class="empty-box">
+            <h4>🌿 今日の最小接触はすべてクリア！</h4>
+            <p>夜はゆっくり脱力して、ケアルに一言だけ残そう</p>
+          </div>
+        `;
+      } else {
+        widgetEl.innerHTML = todayList.map(item => renderCardHtml(item, 'widget')).join('');
+      }
+
+      // 2. 右側：アプリのタブ数字＆リスト描画
+      document.getElementById('tabBtn-today').textContent = `☀️ 今日 (${todayList.length})`;
+      document.getElementById('tabBtn-backlog').textContent = `🌱 控え (${backlogList.length})`;
+      document.getElementById('tabBtn-done').textContent = `✨ 軌跡 (${doneList.length})`;
+
+      const hintEl = document.getElementById('sectionHintText');
+      const appListEl = document.getElementById('appListContainer');
+      const titleInput = document.getElementById('titleInput');
+
+      if (currentTab === 'today') {
+        hintEl.textContent = '📱 ホーム画面ウィジェットにそのまま表示される「今日触れる項目」です';
+        titleInput.placeholder = '今日触れることに1秒で追加...';
+        if (todayList.length === 0) {
+          appListEl.innerHTML = `
+            <div class="empty-box">
+              <h4>🌿 今日の最小接触はすべてクリア！</h4>
+              <p>青空と草原を眺めてゆっくり脱力しよう。控えから足したくなったら「控え」タブへ。</p>
+            </div>
+          `;
+        } else {
+          appListEl.innerHTML = todayList.map(item => renderCardHtml(item, 'app-today')).join('');
+        }
+      } else if (currentTab === 'backlog') {
+        hintEl.textContent = '🌱 今すぐやらなくていい候補。遅延警告は出ません。触りたくなったら「☀️ 今日へ」';
+        titleInput.placeholder = '控えリストに1秒で追加...';
+        if (backlogList.length === 0) {
+          appListEl.innerHTML = `<div class="empty-box"><h4>控えの項目はありません</h4></div>`;
+        } else {
+          appListEl.innerHTML = backlogList.map(item => renderCardHtml(item, 'app-backlog')).join('');
+        }
+      } else {
+        hintEl.textContent = '✨ あなたが実際に触れて前に進めた軌跡（ベクトル）です';
+        titleInput.placeholder = '今日触れることに1秒で追加...';
+        if (doneList.length === 0) {
+          appListEl.innerHTML = `<div class="empty-box"><h4>まだ完了した履歴はありません</h4></div>`;
+        } else {
+          appListEl.innerHTML = doneList.map(item => renderCardHtml(item, 'app-done')).join('');
+        }
+      }
+    }
+
+    async function completeItem(id) {
+      const nowIso = new Date().toISOString();
+      items = items.map(t => t.id === id ? { ...t, status: 'done', completed_at: nowIso } : t);
+      saveItems();
+
+      const { url, key } = getSupabaseCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done', completed_at: nowIso })
+        });
+      }
+    }
+
+    async function reopenItem(id) {
+      items = items.map(t => t.id === id ? { ...t, status: 'todo', completed_at: null } : t);
+      saveItems();
+
+      const { url, key } = getSupabaseCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo', completed_at: null })
+        });
+      }
+    }
+
+    async function moveItem(id, toToday) {
+      items = items.map(t => t.id === id ? { ...t, is_today: toToday } : t);
+      saveItems();
+
+      const { url, key } = getSupabaseCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_today: toToday })
+        });
+      }
+    }
+
+    async function handleAddTodo() {
+      const titleEl = document.getElementById('titleInput');
+      const noteEl = document.getElementById('noteInput');
+      const dueEl = document.getElementById('dueInput');
+      const title = titleEl.value.trim();
+      if (!title) return;
+
+      const newItem = {
+        id: 'local-' + Date.now(),
+        title,
+        short_note: noteEl.value.trim(),
+        requires_submission_check: quickSubmitFlag,
+        is_today: currentTab !== 'backlog',
+        due_date: dueEl.value || null,
+        status: 'todo',
+        source: 'android',
+        completed_at: null,
+        created_at: new Date().toISOString()
+      };
+
+      titleEl.value = '';
+      noteEl.value = '';
+      dueEl.value = '';
+      quickSubmitFlag = false;
+      document.getElementById('submitToggleBtn').classList.remove('active');
+      document.getElementById('submitToggleBtn').textContent = '＋提出確認まで';
+      document.getElementById('quickOptionsPanel').classList.remove('open');
+
+      const { url, key } = getSupabaseCreds();
+      if (url && key) {
+        const { id, ...payload } = newItem;
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos`, {
+          method: 'POST',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        await loadItems();
+        return;
+      }
+
+      items.unshift(newItem);
+      saveItems();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      ['today', 'backlog', 'done'].forEach(t => {
+        document.getElementById('tabBtn-' + t).classList.toggle('active', t === tab);
+      });
+      renderAll();
+    }
+
+    function toggleQuickOptions() {
+      document.getElementById('quickOptionsPanel').classList.toggle('open');
+    }
+
+    function toggleSubmitFlag() {
+      quickSubmitFlag = !quickSubmitFlag;
+      const btn = document.getElementById('submitToggleBtn');
+      btn.classList.toggle('active', quickSubmitFlag);
+      btn.textContent = quickSubmitFlag ? '✓ 提出確認あり' : '＋提出確認まで';
+    }
+
+    function toggleConfigModal() {
+      const modal = document.getElementById('configModal');
+      const { url, key } = getSupabaseCreds();
+      document.getElementById('sbUrlInput').value = url;
+      document.getElementById('sbKeyInput').value = key;
+      modal.classList.toggle('open');
+    }
+
+    function saveSupabaseConfig() {
+      const url = document.getElementById('sbUrlInput').value.trim();
+      const key = document.getElementById('sbKeyInput').value.trim();
+      localStorage.setItem(SB_URL_KEY, url);
+      localStorage.setItem(SB_ANON_KEY, key);
+      document.getElementById('configModal').classList.remove('open');
+      loadItems();
+    }
+
+    function resetSampleData() {
+      localStorage.removeItem(STORAGE_KEY);
+      loadItems();
+    }
+
+    loadItems();
+  </script>
+</body>
+</html>

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#1E57C8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <title>pochi</title>
+  <style>
+    :root {
+      --xp-sky-top: #1E57C8;
+      --xp-sky-mid: #3B82F6;
+      --xp-sky-low: #84CAFF;
+      --xp-sky-horizon: #CAE8FF;
+      --card-glass: rgba(255, 255, 255, 0.93);
+      --card-glass-done: rgba(255, 255, 255, 0.78);
+      --text-main: #0F172A;
+      --text-sub: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #1E57C8;
+    }
+
+    .bliss-screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+      background: linear-gradient(
+        180deg,
+        var(--xp-sky-top) 0%,
+        var(--xp-sky-mid) 38%,
+        var(--xp-sky-low) 67%,
+        var(--xp-sky-horizon) 82%
+      );
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .bliss-svg-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .screen-foreground {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 14px 14px;
+      overflow: hidden;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .app-header h1 {
+      color: #FFFFFF;
+      font-size: 21px;
+      font-weight: 800;
+      text-shadow: 0 1px 4px rgba(15, 35, 80, 0.35);
+    }
+
+    .app-header p {
+      color: #EFF6FF;
+      font-size: 11.5px;
+      margin-top: 2px;
+    }
+
+    .sync-pill {
+      background: rgba(255, 255, 255, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    .tabs-bar {
+      display: flex;
+      background: rgba(255, 255, 255, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 10px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 4px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.95);
+      color: #1E40AF;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+    }
+
+    .app-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 12px;
+    }
+
+    .todo-card {
+      background: var(--card-glass);
+      border: 1px solid #FFFFFF;
+      border-radius: 16px;
+      padding: 12px 13px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+    }
+
+    .todo-card.done-card {
+      background: var(--card-glass-done);
+    }
+
+    .checkbox-btn {
+      width: 26px;
+      height: 26px;
+      min-width: 26px;
+      border-radius: 8px;
+      border: 2.2px solid #2563EB;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: #FFFFFF;
+    }
+
+    .checkbox-btn.checked {
+      background: #4D9E14;
+      border-color: #4D9E14;
+    }
+
+    .card-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.35;
+    }
+
+    .done-card .card-title {
+      text-decoration: line-through;
+      color: #475569;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    .badge-submit { background: #FEE2E2; color: #B91C1C; }
+    .badge-due { background: #DBEAFE; color: #1D4ED8; }
+    .badge-kearu { background: #DCFCE7; color: #15803D; }
+
+    .card-note {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .move-btn {
+      background: #F1F5F9;
+      border: none;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 7px 10px;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .move-btn.promote {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .empty-box {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      padding: 22px 14px;
+      text-align: center;
+    }
+
+    .empty-box h4 {
+      font-size: 15px;
+      color: #1E3A8A;
+      margin-bottom: 6px;
+    }
+
+    .empty-box p {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .quick-add-box {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #FFFFFF;
+      border-radius: 18px;
+      padding: 10px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+    }
+
+    .quick-options {
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .quick-options.open { display: flex; }
+
+    .quick-options input {
+      width: 100%;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      border-radius: 9px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+
+    .quick-options-row { display: flex; gap: 6px; }
+
+    .submit-toggle-btn {
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      color: #475569;
+      border-radius: 9px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .submit-toggle-btn.active {
+      background: #FEE2E2;
+      border-color: #FCA5A5;
+      color: #B91C1C;
+    }
+
+    .quick-main-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .opt-toggle-btn {
+      background: #E0F2FE;
+      color: #0369A1;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 9px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .quick-input {
+      flex: 1;
+      background: #F8FAFC;
+      border: 1px solid #CBD5E1;
+      border-radius: 10px;
+      padding: 10px 11px;
+      font-size: 14px;
+    }
+
+    .quick-submit-btn {
+      background: #4D9E14;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 15px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .settings-sheet {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 10;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .settings-sheet.open { display: flex; }
+
+    .settings-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 18px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .settings-card h3 { font-size: 15px; color: #1E3A8A; }
+    .settings-card input {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #CBD5E1;
+      font-size: 13px;
+    }
+    .settings-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    .btn-primary {
+      background: #2563EB;
+      color: #FFF;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-secondary {
+      background: #E2E8F0;
+      color: #334155;
+      border: none;
+      border-radius: 10px;
+      padding: 9px 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="bliss-screen">
+    <svg class="bliss-svg-bg" viewBox="0 0 400 800" preserveAspectRatio="none">
+      <ellipse cx="90" cy="150" rx="75" ry="22" fill="rgba(255,255,255,0.42)" />
+      <ellipse cx="130" cy="142" rx="55" ry="26" fill="rgba(255,255,255,0.52)" />
+      <ellipse cx="310" cy="210" rx="85" ry="24" fill="rgba(255,255,255,0.38)" />
+      <ellipse cx="200" cy="430" rx="130" ry="28" fill="rgba(255,255,255,0.55)" />
+      <path d="M0,535 C120,480 260,510 400,550 L400,800 L0,800 Z" fill="#7CC623" />
+      <path d="M0,585 C150,550 280,530 400,575 L400,800 L0,800 Z" fill="#56A818" />
+      <path d="M0,645 C140,615 290,635 400,615 L400,800 L0,800 Z" fill="#3B8712" />
+    </svg>
+
+    <div class="screen-foreground">
+      <div class="app-header">
+        <div>
+          <h1>☁️ pochi</h1>
+          <p>スピードではなくベクトル。今日触れる1〜3個だけ</p>
+        </div>
+        <button class="sync-pill" id="syncPillBtn" onclick="openSettings()">🌿 設定</button>
+      </div>
+
+      <div class="tabs-bar">
+        <button class="tab-btn active" id="tabBtn-today" onclick="switchTab('today')">☀️ 今日</button>
+        <button class="tab-btn" id="tabBtn-backlog" onclick="switchTab('backlog')">🌱 控え</button>
+        <button class="tab-btn" id="tabBtn-done" onclick="switchTab('done')">✨ 軌跡</button>
+      </div>
+
+      <div class="app-list" id="appListContainer"></div>
+
+      <div class="quick-add-box">
+        <div class="quick-options" id="quickOptionsPanel">
+          <input type="text" id="noteInput" placeholder="1行補足（例: 最小: 1問だけ見る）" />
+          <div class="quick-options-row">
+            <input type="date" id="dueInput" />
+            <button type="button" class="submit-toggle-btn" id="submitToggleBtn" onclick="toggleSubmitFlag()">
+              ＋提出確認まで
+            </button>
+          </div>
+        </div>
+        <div class="quick-main-row">
+          <button type="button" class="opt-toggle-btn" onclick="toggleQuickOptions()">1行補足</button>
+          <input
+            type="text"
+            class="quick-input"
+            id="titleInput"
+            placeholder="今日触れることに1秒で追加..."
+            onkeydown="if(event.key==='Enter') handleAddTodo()"
+          />
+          <button type="button" class="quick-submit-btn" onclick="handleAddTodo()">追加</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-sheet" id="settingsSheet">
+      <div class="settings-card">
+        <h3>📲 ホーム画面ウィジェット対応版 (Android APK)</h3>
+        <a href="./pochi.apk" download="pochi.apk" style="display:block;text-align:center;background:#4D9E14;color:#FFF;text-decoration:none;padding:11px;border-radius:10px;font-weight:800;font-size:13.5px;margin-bottom:6px;">📦 pochi.apk（ウィジェット付き）をダウンロード</a>
+        <h3 style="margin-top:6px;">🔗 Supabase リアルタイム同期設定</h3>
+        <input type="text" id="sbUrlInput" placeholder="Supabase URL (https://xxxx.supabase.co)" />
+        <input type="password" id="sbKeyInput" placeholder="Supabase anon public key" />
+        <div class="settings-actions">
+          <button class="btn-secondary" onclick="closeSettings()">閉じる</button>
+          <button class="btn-primary" onclick="saveSettings()">保存して同期</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'kearu_todo_preview_items_v1';
+    const SB_URL_KEY = 'kearu_todo_sb_url';
+    const SB_ANON_KEY = 'kearu_todo_sb_anon_key';
+
+    const DEFAULT_ITEMS = [
+      {
+        id: 'kearu-1',
+        title: '出社時に挨拶＋一言だけ話しかける',
+        short_note: '最小: うまく話そうとせず挨拶＋一言だけ',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: '2026-11-05',
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:00:00+09:00'
+      },
+      {
+        id: 'kearu-2',
+        title: '紙ノートを開いて1行だけ字を書く',
+        short_note: '最小: 風呂上がりにペンを持つだけ',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:05:00+09:00'
+      },
+      {
+        id: 'kearu-3',
+        title: 'Logicを開いてボーカルC案を10秒聴く',
+        short_note: '最小: プロジェクトを開くだけでクリア',
+        requires_submission_check: false,
+        is_today: true,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:10:00+09:00'
+      },
+      {
+        id: 'kearu-4',
+        title: 'Windows PCの定期通知タスクを停止する',
+        short_note: '設定画面で無効化・停止反映の確認まで',
+        requires_submission_check: true,
+        is_today: false,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:15:00+09:00'
+      },
+      {
+        id: 'kearu-5',
+        title: '応用情報・DFSの図解ページを1つ眺める',
+        short_note: '最小: Wikiの図を1個見るだけ',
+        requires_submission_check: false,
+        is_today: false,
+        due_date: null,
+        status: 'todo',
+        source: 'kearu',
+        completed_at: null,
+        created_at: '2026-11-04T23:20:00+09:00'
+      }
+    ];
+
+    let currentTab = 'today';
+    let quickSubmitFlag = false;
+    let items = [];
+
+    function getCreds() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('sb_url') && params.get('sb_key')) {
+        localStorage.setItem(SB_URL_KEY, params.get('sb_url'));
+        localStorage.setItem(SB_ANON_KEY, params.get('sb_key'));
+      }
+      return {
+        url: localStorage.getItem(SB_URL_KEY) || 'https://qwvcxsifvqvoexqswdno.supabase.co',
+        key: localStorage.getItem(SB_ANON_KEY) || 'sb_publishable_B5dePwA6PSq53X1tFhMS5w_CQAC0Kh8'
+      };
+    }
+
+    async function loadItems() {
+      const { url, key } = getCreds();
+      const pill = document.getElementById('syncPillBtn');
+      if (url && key) {
+        pill.textContent = '🟢 同期中';
+        try {
+          const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?select=*&order=created_at.asc`, {
+            headers: { apikey: key, Authorization: `Bearer ${key}` }
+          });
+          if (res.ok) {
+            items = await res.json();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+            renderAll();
+            return;
+          }
+        } catch (e) {}
+      } else {
+        pill.textContent = '🌿 設定';
+      }
+      const raw = localStorage.getItem(STORAGE_KEY);
+      items = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+      renderAll();
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      renderAll();
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderAll() {
+      const todayList = items.filter(t => t.status === 'todo' && (t.is_today || Boolean(t.due_date)));
+      const todayIds = new Set(todayList.map(t => t.id));
+      const backlogList = items.filter(t => t.status === 'todo' && !todayIds.has(t.id));
+      const doneList = items.filter(t => t.status === 'done');
+
+      document.getElementById('tabBtn-today').textContent = `☀️ 今日 (${todayList.length})`;
+      document.getElementById('tabBtn-backlog').textContent = `🌱 控え (${backlogList.length})`;
+      document.getElementById('tabBtn-done').textContent = `✨ 軌跡 (${doneList.length})`;
+
+      const list = currentTab === 'today' ? todayList : currentTab === 'backlog' ? backlogList : doneList;
+      const el = document.getElementById('appListContainer');
+
+      if (!list.length) {
+        el.innerHTML = `<div class="empty-box"><h4>🌿 項目はありません</h4><p>青空と草原を眺めてゆっくり過ごそう</p></div>`;
+        return;
+      }
+
+      el.innerHTML = list.map(item => {
+        const isDone = item.status === 'done';
+        const badges = [];
+        if (item.requires_submission_check) badges.push(`<span class="badge badge-submit">提出・反映確認まで</span>`);
+        if (item.due_date) badges.push(`<span class="badge badge-due">📅 期限 ${escapeHtml(item.due_date)}</span>`);
+        if (item.source === 'kearu') badges.push(`<span class="badge badge-kearu">ケアル対話</span>`);
+
+        const moveBtn = currentTab === 'today'
+          ? `<button class="move-btn" onclick="moveItem('${item.id}', false)">控えへ</button>`
+          : currentTab === 'backlog'
+          ? `<button class="move-btn promote" onclick="moveItem('${item.id}', true)">☀️ 今日へ</button>`
+          : '';
+
+        return `
+          <div class="todo-card ${isDone ? 'done-card' : ''}">
+            <button class="checkbox-btn ${isDone ? 'checked' : ''}" onclick="${isDone ? `reopenItem('${item.id}')` : `completeItem('${item.id}')`}">${isDone ? '✓' : ''}</button>
+            <div class="card-body">
+              <div class="card-title">${escapeHtml(item.title)}</div>
+              ${badges.length ? `<div class="card-badges">${badges.join('')}</div>` : ''}
+              ${item.short_note ? `<div class="card-note">${escapeHtml(item.short_note)}</div>` : ''}
+            </div>
+            ${moveBtn}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function completeItem(id) {
+      const nowIso = new Date().toISOString();
+      items = items.map(t => t.id === id ? { ...t, status: 'done', completed_at: nowIso } : t);
+      saveItems();
+      const { url, key } = getCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done', completed_at: nowIso })
+        });
+      }
+    }
+
+    async function reopenItem(id) {
+      items = items.map(t => t.id === id ? { ...t, status: 'todo', completed_at: null } : t);
+      saveItems();
+      const { url, key } = getCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'todo', completed_at: null })
+        });
+      }
+    }
+
+    async function moveItem(id, toToday) {
+      items = items.map(t => t.id === id ? { ...t, is_today: toToday } : t);
+      saveItems();
+      const { url, key } = getCreds();
+      if (url && key) {
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos?id=eq.${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_today: toToday })
+        });
+      }
+    }
+
+    async function handleAddTodo() {
+      const titleEl = document.getElementById('titleInput');
+      const noteEl = document.getElementById('noteInput');
+      const dueEl = document.getElementById('dueInput');
+      const title = titleEl.value.trim();
+      if (!title) return;
+
+      const newItem = {
+        id: 'local-' + Date.now(),
+        title,
+        short_note: noteEl.value.trim(),
+        requires_submission_check: quickSubmitFlag,
+        is_today: currentTab !== 'backlog',
+        due_date: dueEl.value || null,
+        status: 'todo',
+        source: 'android',
+        completed_at: null,
+        created_at: new Date().toISOString()
+      };
+
+      titleEl.value = '';
+      noteEl.value = '';
+      dueEl.value = '';
+      quickSubmitFlag = false;
+      document.getElementById('submitToggleBtn').classList.remove('active');
+      document.getElementById('quickOptionsPanel').classList.remove('open');
+
+      const { url, key } = getCreds();
+      if (url && key) {
+        const { id, ...payload } = newItem;
+        await fetch(`${url.replace(/\/$/, '')}/rest/v1/todos`, {
+          method: 'POST',
+          headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        await loadItems();
+        return;
+      }
+
+      items.unshift(newItem);
+      saveItems();
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      ['today', 'backlog', 'done'].forEach(t => {
+        document.getElementById('tabBtn-' + t).classList.toggle('active', t === tab);
+      });
+      renderAll();
+    }
+
+    function toggleQuickOptions() {
+      document.getElementById('quickOptionsPanel').classList.toggle('open');
+    }
+
+    function toggleSubmitFlag() {
+      quickSubmitFlag = !quickSubmitFlag;
+      document.getElementById('submitToggleBtn').classList.toggle('active', quickSubmitFlag);
+    }
+
+    function openSettings() {
+      const { url, key } = getCreds();
+      document.getElementById('sbUrlInput').value = url;
+      document.getElementById('sbKeyInput').value = key;
+      document.getElementById('settingsSheet').classList.add('open');
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsSheet').classList.remove('open');
+    }
+
+    function saveSettings() {
+      localStorage.setItem(SB_URL_KEY, document.getElementById('sbUrlInput').value.trim());
+      localStorage.setItem(SB_ANON_KEY, document.getElementById('sbKeyInput').value.trim());
+      closeSettings();
+      loadItems();
+    }
+
+    loadItems();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+  </script>
+</body>
+</html>
