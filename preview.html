@@ -524,6 +524,69 @@
       scrollbar-width: none;
     }
     .chat-presets-row::-webkit-scrollbar { display: none; }
+    .proj-bar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      overflow-x: auto;
+      padding-bottom: 7px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #E2E8F0;
+      scrollbar-width: none;
+    }
+    .proj-bar::-webkit-scrollbar { display: none; }
+    .proj-label {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #475569;
+      white-space: nowrap;
+      margin-right: 2px;
+    }
+    .proj-pill {
+      background: #F1F5F9;
+      border: 1px solid #CBD5E1;
+      color: #334155;
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .proj-pill.active {
+      background: #1D4ED8;
+      border-color: #1E40AF;
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(29, 78, 216, 0.28);
+    }
+    .proj-filter-btn {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      color: #92400E;
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 8px;
+      white-space: nowrap;
+      cursor: pointer;
+      margin-left: auto;
+    }
+    .proj-filter-btn.active {
+      background: #D97706;
+      border-color: #B45309;
+      color: #FFFFFF;
+    }
+    .chat-proj-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.22);
+      color: #FFFFFF;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 999px;
+      margin-bottom: 4px;
+    }
     .chat-chip {
       background: #EFF6FF;
       border: 1px solid #BFDBFE;
@@ -614,6 +677,7 @@
       </div>
 
       <div class="quick-add-box" id="chatQuickAddBox" style="display:none;">
+        <div class="proj-bar" id="projBar"></div>
         <div class="chat-presets-row">
           <button type="button" class="chat-chip" onclick="insertChatPreset('【日記】')">📝 日記・思考</button>
           <button type="button" class="chat-chip" onclick="insertChatPreset('【調べて】')">🔍 調べ物・Wiki化</button>
@@ -625,7 +689,7 @@
             class="chat-input-area"
             id="chatInput"
             rows="1"
-            placeholder="Macの俺へ指示・相談・日記を送る..."
+            placeholder="【kearu】へ指示・相談・日記を送る..."
             onkeydown="if(event.key==='Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); handleSendChat(); }"
           ></textarea>
           <button type="button" class="chat-send-btn" id="chatSendBtn" onclick="handleSendChat()">送信</button>
@@ -636,7 +700,7 @@
     <div class="settings-sheet" id="settingsSheet">
       <div class="settings-card">
         <h3>📲 ホーム画面ウィジェット対応版 (Android APK)</h3>
-        <a href="./pochi.apk" download="pochi.apk" style="display:block;text-align:center;background:#4D9E14;color:#FFF;text-decoration:none;padding:11px;border-radius:10px;font-weight:800;font-size:13.5px;margin-bottom:6px;">📦 pochi.apk（ウィジェット付き）をダウンロード</a>
+        <a href="https://pochi3123-source.github.io/kearu-todo/pochi.apk" download="pochi.apk" target="_blank" rel="noopener" style="display:block;text-align:center;background:#4D9E14;color:#FFF;text-decoration:none;padding:11px;border-radius:10px;font-weight:800;font-size:13.5px;margin-bottom:6px;">📦 pochi.apk（ウィジェット付き）をダウンロード</a>
         <h3 style="margin-top:6px;">🔗 Supabase リアルタイム同期設定</h3>
         <input type="text" id="sbUrlInput" placeholder="Supabase URL (https://xxxx.supabase.co)" />
         <input type="password" id="sbKeyInput" placeholder="Supabase anon public key" />
@@ -719,6 +783,58 @@
     let currentTab = 'today';
     let quickSubmitFlag = false;
     let items = [];
+    let selectedProject = localStorage.getItem('pochi_selected_project') || 'kearu';
+    let filterByProject = false;
+
+    const PROJECTS = [
+      { id: 'kearu', label: '🌿 kearu' },
+      { id: 'pochi', label: '☁️ pochi' },
+      { id: 'sola', label: '🎹 sola' },
+      { id: 'liminal-walk', label: '🚶 liminal-walk' },
+      { id: 'oto-nikki', label: '🎵 oto-nikki' },
+      { id: 'DeskReset', label: '🧹 DeskReset' },
+      { id: 'kioku', label: '🧠 kioku' }
+    ];
+
+    function parseChatTitle(rawTitle) {
+      const s = String(rawTitle || '').replace(/^\[CHAT\]\s*/, '');
+      const m = s.match(/^\[proj:([^\]]+)\]\s*([\s\S]*)$/);
+      if (m) {
+        return { project: m[1], message: m[2] };
+      }
+      return { project: 'kearu', message: s };
+    }
+
+    function renderProjectBar() {
+      const bar = document.getElementById('projBar');
+      if (!bar) return;
+      const pillsHtml = PROJECTS.map(p => {
+        const active = p.id === selectedProject ? 'active' : '';
+        return `<button type="button" class="proj-pill ${active}" onclick="selectProject('${p.id}')">${p.label}</button>`;
+      }).join('');
+      const filterActive = filterByProject ? 'active' : '';
+      const filterLabel = filterByProject ? `🔍 ${selectedProject}のみ` : `📁 全PJ表示`;
+      bar.innerHTML = `<span class="proj-label">宛先PJ:</span>${pillsHtml}<button type="button" class="proj-filter-btn ${filterActive}" onclick="toggleProjectFilter()">${filterLabel}</button>`;
+      const input = document.getElementById('chatInput');
+      if (input) {
+        input.placeholder = `【${selectedProject}】へ指示・相談・日記を送る...`;
+      }
+    }
+
+    function selectProject(projId) {
+      selectedProject = projId;
+      localStorage.setItem('pochi_selected_project', projId);
+      renderProjectBar();
+      if (filterByProject) {
+        renderAll(true);
+      }
+    }
+
+    function toggleProjectFilter() {
+      filterByProject = !filterByProject;
+      renderProjectBar();
+      renderAll(true);
+    }
 
     function getCreds() {
       const params = new URLSearchParams(location.search);
@@ -811,12 +927,18 @@
       const el = document.getElementById('appListContainer');
 
       if (currentTab === 'chat') {
-        if (!chatList.length) {
-          el.innerHTML = `<div class="empty-box"><h4>💬 Macの俺へ指示を出せます</h4><p>下の入力欄から「〇〇調べてWikiにまとめて」「今日の日記：〜」など何でも送ってください。Mac側のAntigravityが自動で受け取って返事をここに返します。</p></div>`;
+        renderProjectBar();
+        const visibleChats = filterByProject
+          ? chatList.filter(item => parseChatTitle(item.title).project === selectedProject)
+          : chatList;
+        if (!visibleChats.length) {
+          el.innerHTML = `<div class="empty-box"><h4>💬 【${escapeHtml(selectedProject)}】への指示履歴はありません</h4><p>下のプロジェクト選択バーで宛先を選んで、指示・相談・日記を送ってください。Mac側のAntigravityが自動で受け取って返事をここに返します。</p></div>`;
           return;
         }
-        el.innerHTML = chatList.map(item => {
-          const userMsg = String(item.title || '').replace(/^\[CHAT\]\s*/, '');
+        el.innerHTML = visibleChats.map(item => {
+          const parsed = parseChatTitle(item.title);
+          const userMsg = parsed.message;
+          const projName = parsed.project;
           const reply = String(item.short_note || '').trim();
           const timeStr = formatTimeShort(item.created_at);
           let aiBubbleHtml = '';
@@ -836,7 +958,7 @@
             aiBubbleHtml = `
               <div class="chat-ai-row">
                 <div class="chat-ai-bubble">
-                  <div class="chat-ai-header">🤖 俺（Mac / Antigravity）</div>
+                  <div class="chat-ai-header">🤖 俺（Mac / ${escapeHtml(projName)}）</div>
                   <div>${escapeHtml(reply)}</div>
                 </div>
               </div>
@@ -846,6 +968,7 @@
             <div class="chat-pair" data-id="${item.id}">
               <div class="chat-user-row">
                 <div class="chat-user-bubble">
+                  <div class="chat-proj-badge">📁 ${escapeHtml(projName)}</div>
                   <div>${escapeHtml(userMsg)}</div>
                   <div class="chat-meta">
                     <span>${escapeHtml(timeStr)}</span>
@@ -1018,7 +1141,7 @@
 
       const newItem = {
         id: 'local-chat-' + Date.now(),
-        title: '[CHAT] ' + text,
+        title: `[CHAT][proj:${selectedProject}] ` + text,
         short_note: '',
         requires_submission_check: false,
         is_today: false,
